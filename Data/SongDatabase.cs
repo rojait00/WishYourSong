@@ -6,12 +6,22 @@ namespace WishYourSong.Data
     {
         public List<FullTrack> Tracks { get; set; } = new List<FullTrack>();
 
-        public Votes Votes { get; set; }
-
         public void AddTrack(FullTrack track)
         {
-            track.Popularity = 1;
-            Tracks.Add(track);
+            if (!Tracks.Any(x => EqualSong(x, track)))
+            {
+                Tracks.Add(track);
+            }
+        }
+
+        public bool EqualSong(FullTrack track1, FullTrack track2)
+        {
+            return GetName(track1) == GetName(track2);
+        }
+
+        private string GetName(FullTrack track)
+        {
+            return track.Name + " - " + String.Join(",", track.Artists.Select(x => x.Name).OrderBy(x => x));
         }
 
         public async Task<List<FullTrack>> SearchTrackAsync(string term)

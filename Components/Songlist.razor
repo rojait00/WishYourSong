@@ -18,7 +18,7 @@
 
         <RadzenDataGridColumn TItem="FullTrack" Title="Artist" Filterable="true" Sortable="true" Width="40%">
             <Template Context="song">
-                @string.Join(", ", song.Artists.Select(x=> x.Name))
+                @string.Join(", ", song.Artists.Select(x=> x.Name).OrderBy(x=>x))
             </Template>
         </RadzenDataGridColumn>
 

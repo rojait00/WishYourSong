@@ -11,7 +11,7 @@
 @if (ContainedSongs.Any())
 {
     <h3>In Playlist</h3>
-    <RadzenDataGrid @ref="containedTrackGrid" AllowPaging="true" PageSize="15" AllowSorting="true" Data="@db.Tracks" TItem="FullTrack">
+    <RadzenDataGrid @ref="containedTrackGrid" AllowPaging="true" PageSize="15" AllowSorting="true" Data="@ContainedSongs" TItem="FullTrack">
         <Columns>
             <RadzenDataGridColumn TItem="FullTrack" Title="Title" Filterable="false" Sortable="true" Width="40%">
                 <Template Context="song">
@@ -21,7 +21,7 @@
 
             <RadzenDataGridColumn TItem="FullTrack" Title="Artist" Filterable="false" Sortable="true" Width="40%">
                 <Template Context="song">
-                    @string.Join(", ", song.Artists.Select(x=> x.Name))
+                    @string.Join(", ", song.Artists.Select(x=> x.Name).OrderBy(x=> x))
                 </Template>
             </RadzenDataGridColumn>
 
@@ -54,7 +54,7 @@
 
             <RadzenDataGridColumn TItem="FullTrack" Title="Artist" Filterable="false" Sortable="true" Width="45%">
                 <Template Context="song">
-                    @string.Join(", ", song.Artists.Select(x=> x.Name))
+                    @string.Join(", ", song.Artists.Select(x=> x.Name).OrderBy(x=> x))
                 </Template>
             </RadzenDataGridColumn>
 
@@ -114,7 +114,7 @@
         ContainedSongs = db.GetContainedTracks(result);
 
         NewSongs = result.Take(15)
-                         .Where(x => !ContainedSongs.Any(c => c.Id == x.Id))
+                         .Where(x => !ContainedSongs.Any(c => db.EqualSong(x, c)))
                          .ToList();
 
         if (containedTrackGrid != null)
