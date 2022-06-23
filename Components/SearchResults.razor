@@ -1,7 +1,10 @@
 ﻿@using SpotifyAPI.Web
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
 
 @inject WishYourSong.Data.SongDatabase db
+@inject WishYourSong.Data.Votes votes
 
+@inject ProtectedLocalStorage BrowserStorage
 
 <RadzenTextBox Placeholder="Search..." type="search" @oninput="@OnSearch" Class="w-100" />
 
@@ -24,14 +27,14 @@
 
             <RadzenDataGridColumn TItem="FullTrack" Title="Likes" Filterable="false" Sortable="true" TextAlign="TextAlign.Center" Width="10%">
                 <Template Context="song">
-                    @song.Popularity
+                    @votes.GetVotes(song.Id)
                 </Template>
             </RadzenDataGridColumn>
 
-            <RadzenDataGridColumn TItem="FullTrack" Property="OrderID" Title="Vote" Width="100px" Filterable=false Sortable=false TextAlign=TextAlign.Center>
+            <RadzenDataGridColumn TItem="FullTrack" Title="Vote" Width="100px" Filterable=false Sortable=false TextAlign=TextAlign.Center>
                 <Template Context="song">
-                    <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="thumb_up" Class="m-1" Click=@(() => VoteSongUp(song)) />
-                    <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="thumb_down" Class="m-1" Click=@(() => VoteSongDown(song)) />
+                    <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="thumb_up" Class="m-1" Click=@(() => votes.AddVoteAsync(song, true, BrowserStorage)) />
+                    <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="thumb_down" Class="m-1" Click=@(() => votes.AddVoteAsync(song, false, BrowserStorage)) />
                 </Template>
             </RadzenDataGridColumn>
         </Columns>
@@ -129,6 +132,9 @@
         db.AddTrack(song);
         NewSongs.Remove(song);
         ContainedSongs.Add(song);
+
+        await votes.AddVoteAsync(song, true, BrowserStorage);
+
         if (containedTrackGrid != null)
         {
             await containedTrackGrid.Reload();
@@ -137,18 +143,6 @@
         {
             await newTrackGrid.Reload();
         }
-    }
-
-    public async void VoteSongUp(FullTrack song)
-    {
-        song.Popularity++;
-        await containedTrackGrid.Reload();
-    }
-
-    public async void VoteSongDown(FullTrack song)
-    {
-        song.Popularity--;
-        await containedTrackGrid.Reload();
     }
 
 }

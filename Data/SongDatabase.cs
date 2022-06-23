@@ -6,6 +6,8 @@ namespace WishYourSong.Data
     {
         public List<FullTrack> Tracks { get; set; } = new List<FullTrack>();
 
+        public Votes Votes { get; set; }
+
         public void AddTrack(FullTrack track)
         {
             track.Popularity = 1;
