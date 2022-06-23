@@ -1,6 +1,6 @@
 ﻿namespace WishYourSong
 {
-    public class SpotifyOAuthToken
+    public class SpotifyTokens
     {
         /// <summary>
         /// To Do: Replace with your own Token
@@ -8,5 +8,7 @@
         /// https://developer.spotify.com/console/get-playlist-tracks/
         /// </summary>
         public const string Token = "";
+
+
     }
 }
