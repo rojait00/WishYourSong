@@ -1,26 +1,17 @@
 ﻿@page "/"
 @using WishYourSong.Components
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Search Song</PageTitle>
 
-<RadzenTextBox Placeholder="Search..." type="search" @oninput="@OnSearch" Class="w-100" />
+<SearchResults @bind-value=Term></SearchResults>
 
-@if (string.IsNullOrWhiteSpace(term))
+@if (string.IsNullOrWhiteSpace(Term))
 {
-    <Playlist></Playlist>
-}
-else
-{
-    <SearchResults bind-Value=term></SearchResults>
+    <Songlist></Songlist>
 }
 
 
 @code
 {
-    string term = "";
-
-    private void OnSearch (ChangeEventArgs args)
-    {
-        term = args.Value.ToString();
-    }
+    string Term { get; set; } = "";
 }

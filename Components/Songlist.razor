@@ -1,0 +1,58 @@
+﻿@using SpotifyAPI.Web
+
+@inject WishYourSong.Data.SongDatabase db
+
+<h3>Playlist</h3>
+
+<RadzenDataGrid @ref="trackGrid" AllowFiltering="true" AllowPaging="true" PageSize="15" AllowSorting="true" Data="@db.Tracks" TItem="FullTrack">
+    <Columns>
+        <RadzenDataGridColumn TItem="FullTrack" Title="Title" Filterable="true" Sortable="true" Width="40%">
+            <Template Context="song">
+                @song.Name
+            </Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="FullTrack" Title="Artist" Filterable="true" Sortable="true" Width="40%">
+            <Template Context="song">
+                @string.Join(", ", song.Artists.Select(x=> x.Name))
+            </Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="FullTrack" Title="Likes" Filterable="true" Sortable="true" TextAlign="TextAlign.Center" Width="10%">
+            <Template Context="song">
+                @song.Popularity
+            </Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="FullTrack" Property="OrderID" Title="Vote" Width="10%">
+            <Template Context="song">
+                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="thumb_up" Class="m-1" Click=@(() => VoteSongUp(song))/>
+                <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="thumb_down" Class="m-1" Click=@(() => VoteSongDown(song))/>
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+
+@code {
+
+    RadzenDataGrid<FullTrack> trackGrid;
+
+    public void Load()
+    {
+
+    }
+
+    public async void VoteSongUp(FullTrack song)
+    {
+        song.Popularity++;
+        await trackGrid.UpdateRow(song);
+    }
+
+    public async void VoteSongDown(FullTrack song)
+    {
+        song.Popularity--;
+        await trackGrid.UpdateRow(song);
+    }
+
+}

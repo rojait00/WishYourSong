@@ -1,7 +1,154 @@
-﻿<h3>SearchResults</h3>
+﻿@using SpotifyAPI.Web
+
+@inject WishYourSong.Data.SongDatabase db
+
+
+<RadzenTextBox Placeholder="Search..." type="search" @oninput="@OnSearch" Class="w-100" />
+
+@if (ContainedSongs.Any())
+{
+    <h3>In Playlist</h3>
+    <RadzenDataGrid @ref="containedTrackGrid" AllowPaging="true" PageSize="15" AllowSorting="true" Data="@db.Tracks" TItem="FullTrack">
+        <Columns>
+            <RadzenDataGridColumn TItem="FullTrack" Title="Title" Filterable="false" Sortable="true" Width="40%">
+                <Template Context="song">
+                    @song.Name
+                </Template>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="FullTrack" Title="Artist" Filterable="false" Sortable="true" Width="40%">
+                <Template Context="song">
+                    @string.Join(", ", song.Artists.Select(x=> x.Name))
+                </Template>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="FullTrack" Title="Likes" Filterable="false" Sortable="true" TextAlign="TextAlign.Center" Width="10%">
+                <Template Context="song">
+                    @song.Popularity
+                </Template>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="FullTrack" Property="OrderID" Title="Vote" Width="100px" Filterable=false Sortable=false TextAlign=TextAlign.Center>
+                <Template Context="song">
+                    <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="thumb_up" Class="m-1" Click=@(() => VoteSongUp(song)) />
+                    <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="thumb_down" Class="m-1" Click=@(() => VoteSongDown(song)) />
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+}
+
+@if (NewSongs.Any())
+{
+    <h3>Search Results</h3>
+    <RadzenDataGrid @ref="newTrackGrid" AllowFiltering="false" AllowPaging="true" PageSize="15" AllowSorting="true" Data="@NewSongs" TItem="FullTrack">
+        <Columns>
+            <RadzenDataGridColumn TItem="FullTrack" Title="Title" Filterable="false" Sortable="true" Width="45%">
+                <Template Context="song">
+                    @song.Name
+                </Template>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="FullTrack" Title="Artist" Filterable="false" Sortable="true" Width="45%">
+                <Template Context="song">
+                    @string.Join(", ", song.Artists.Select(x=> x.Name))
+                </Template>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="FullTrack" Property="OrderID" Title="Vote" Width="50px" Filterable=false Sortable=false>
+                <Template Context="song">
+                    <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="thumb_up" Class="m-1" Click=@(() => AddSong(song)) />
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+}
 
 @code {
+    [Parameter]
+    public string Value
+    {
+        get => term;
+        set
+        {
+            if (value == term)
+                return;
 
-    public string Value { get; set; }
+            term = value;
+            if (ValueChanged.HasDelegate)
+            {
+                ValueChanged.InvokeAsync(term);
+            }
+        }
+    }
+
+    [Parameter]
+    public EventCallback<string> ValueChanged { get; set; }
+
+    public List<FullTrack> ContainedSongs { get; set; } = new List<FullTrack>();
+    public List<FullTrack> NewSongs { get; set; } = new List<FullTrack>();
+
+    RadzenDataGrid<FullTrack> newTrackGrid;
+    RadzenDataGrid<FullTrack> containedTrackGrid;
+
+    string term = "";
+
+    private async void OnSearch(ChangeEventArgs args)
+    {
+        Value = args?.Value?.ToString() ?? "";
+
+        List<FullTrack> result;
+
+        try
+        {
+            result = await db.SearchTrackAsync(term);
+        }
+        catch
+        {
+            result = new List<FullTrack>();
+        }
+
+        ContainedSongs = db.GetContainedTracks(result);
+
+        NewSongs = result.Take(15)
+                         .Where(x => !ContainedSongs.Any(c => c.Id == x.Id))
+                         .ToList();
+
+        if (containedTrackGrid != null)
+        {
+            await containedTrackGrid.Reload();
+        }
+        if (newTrackGrid != null)
+        {
+            await newTrackGrid.Reload();
+        }
+    }
+
+    public async void AddSong(FullTrack song)
+    {
+        db.AddTrack(song);
+        NewSongs.Remove(song);
+        ContainedSongs.Add(song);
+        if (containedTrackGrid != null)
+        {
+            await containedTrackGrid.Reload();
+        }
+        if (newTrackGrid != null)
+        {
+            await newTrackGrid.Reload();
+        }
+    }
+
+    public async void VoteSongUp(FullTrack song)
+    {
+        song.Popularity++;
+        await containedTrackGrid.Reload();
+    }
+
+    public async void VoteSongDown(FullTrack song)
+    {
+        song.Popularity--;
+        await containedTrackGrid.Reload();
+    }
 
 }
