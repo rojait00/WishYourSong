@@ -4,7 +4,25 @@ namespace WishYourSong.Data
 {
     public class SongDatabase
     {
+        private ISpotifyClient _spotifyClient;
         public List<FullTrack> Tracks { get; set; } = new List<FullTrack>();
+
+        public SongDatabase(ISpotifyClient spotifyClient)
+        {
+            _spotifyClient = spotifyClient;
+        }
+
+        public async Task Init(Votes votes)
+        {
+            if(Tracks.Count == 0 && votes.Any())
+            {
+                var trackIds = votes.GetIds();
+                var trackResponse = await _spotifyClient.Tracks.GetSeveral(new TracksRequest(trackIds));
+                
+                Tracks.AddRange(trackResponse.Tracks);
+            }
+        }
+
 
         public void AddTrack(FullTrack track)
         {
@@ -26,21 +44,19 @@ namespace WishYourSong.Data
 
         public async Task<List<FullTrack>> SearchTrackAsync(string term)
         {
-            var spotify = new SpotifyClient(SpotifyTokens.OAuth);
-
             var request = new SearchRequest(SearchRequest.Types.Track, term)
             {
                 Limit = 50,
                 Market = "DE"
             };
 
-            var items = await spotify.Search.Item(request);
+            var items = await _spotifyClient.Search.Item(request);
             return items?.Tracks?.Items ?? new List<FullTrack>();
         }
 
         public List<FullTrack> GetContainedTracks(List<FullTrack> result)
         {
-            return result.Where(x => Tracks.Any(dbT => dbT.Id == x.Id)).ToList();
+            return result.Where(x => Tracks.Any(dbT => dbT.Id == x.Id)).ToList(); // ToDo: use Votes
         }
     }
 }

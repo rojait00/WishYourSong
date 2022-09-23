@@ -6,6 +6,7 @@
 
 @inject ProtectedLocalStorage BrowserStorage
 
+
 <h3>Playlist</h3>
 
 <RadzenDataGrid @ref="trackGrid" AllowFiltering="true" AllowPaging="true" PageSize="15" AllowSorting="true" Data="@db.Tracks" TItem="FullTrack">
@@ -30,8 +31,8 @@
 
         <RadzenDataGridColumn TItem="FullTrack" Title="Vote" Width="100px" Filterable=false Sortable=false TextAlign=TextAlign.Center>
             <Template Context="song">
-                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="thumb_up" Class="m-1" Click=@(() => votes.AddVoteAsync(song, true,BrowserStorage)) />
-                <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="thumb_down" Class="m-1" Click=@(() => votes.AddVoteAsync(song, false,BrowserStorage)) />
+                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="thumb_up" Class="m-1" Click=@(() => votes.AddVoteAsync(song, true)) />
+                <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="thumb_down" Class="m-1" Click=@(() => votes.AddVoteAsync(song, false)) />
             </Template>
         </RadzenDataGridColumn>
     </Columns>
@@ -41,4 +42,16 @@
 @code {
 
     RadzenDataGrid<FullTrack> trackGrid;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await votes.Init(BrowserStorage);
+            await db.Init(votes);
+            await trackGrid.Reload();
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
 }

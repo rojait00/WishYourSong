@@ -4,8 +4,6 @@
 @inject WishYourSong.Data.SongDatabase db
 @inject WishYourSong.Data.Votes votes
 
-@inject ProtectedLocalStorage BrowserStorage
-
 <RadzenTextBox Placeholder="Search..." type="search" @oninput="@OnSearch" Class="w-100" />
 
 @if (ContainedSongs.Any())
@@ -33,8 +31,8 @@
 
             <RadzenDataGridColumn TItem="FullTrack" Title="Vote" Width="100px" Filterable=false Sortable=false TextAlign=TextAlign.Center>
                 <Template Context="song">
-                    <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="thumb_up" Class="m-1" Click=@(() => votes.AddVoteAsync(song, true, BrowserStorage)) />
-                    <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="thumb_down" Class="m-1" Click=@(() => votes.AddVoteAsync(song, false, BrowserStorage)) />
+                    <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="thumb_up" Class="m-1" Click=@(() => votes.AddVoteAsync(song, true)) />
+                    <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="thumb_down" Class="m-1" Click=@(() => votes.AddVoteAsync(song, false)) />
                 </Template>
             </RadzenDataGridColumn>
         </Columns>
@@ -133,7 +131,7 @@
         NewSongs.Remove(song);
         ContainedSongs.Add(song);
 
-        await votes.AddVoteAsync(song, true, BrowserStorage);
+        await votes.AddVoteAsync(song, true);
 
         if (containedTrackGrid != null)
         {
