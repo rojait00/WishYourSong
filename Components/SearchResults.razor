@@ -89,8 +89,8 @@
     public List<FullTrack> ContainedSongs { get; set; } = new List<FullTrack>();
     public List<FullTrack> NewSongs { get; set; } = new List<FullTrack>();
 
-    RadzenDataGrid<FullTrack> newTrackGrid;
-    RadzenDataGrid<FullTrack> containedTrackGrid;
+    RadzenDataGrid<FullTrack>? newTrackGrid;
+    RadzenDataGrid<FullTrack>? containedTrackGrid;
 
     string term = "";
 

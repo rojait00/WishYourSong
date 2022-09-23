@@ -5,8 +5,14 @@ namespace WishYourSong.Data
     [DynamoDBTable("UserVote")]
     public class UserVote
     {
+        /// <summary>
+        /// Do not use this Constructor! It is only for generating Objects form JSON!
+        /// </summary>
+        [Obsolete("Do not use this Constructor! It is only for generating Objects form JSON!")]
         public UserVote()
         {
+            UserId = "";
+            TrackId = "";
         }
 
         public UserVote(Guid userId, string trackId, bool isLike)
