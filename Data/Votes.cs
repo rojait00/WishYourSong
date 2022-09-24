@@ -8,14 +8,15 @@ namespace WishYourSong.Data
 {
     public class Votes
     {
-        Dictionary<string, UserVotes> songVotes = new();
+        readonly Dictionary<string, UserVotes> songVotes = new();
         private ProtectedLocalStorage? _browserStorage;
-        private IDynamoDBContext _dbContext;
+        private readonly IDynamoDBContext _dbContext;
+        private readonly ISpotifyClient _spotifyClient;
 
-
-        public Votes(IDynamoDBContext dbContext)
+        public Votes(IDynamoDBContext dbContext, ISpotifyClient spotifyClient)
         {
             _dbContext = dbContext;
+            _spotifyClient = spotifyClient;
         }
 
         public async Task Init(ProtectedLocalStorage browserStorage)
@@ -35,8 +36,41 @@ namespace WishYourSong.Data
 
                 List<UserVote> votes = await scan.GetRemainingAsync();
 
-                votes?.ForEach(x => AddVoteByTrackId(x.TrackId, new User(Guid.Parse(x.UserId)), x.IsLike));
+                votes?.ForEach(async x => await AddVoteByTrackIdAsync(x.TrackId, new User(Guid.Parse(x.UserId)), x.IsLike));
             }
+        }
+
+        public async Task AddPlaylistAsync(string playlistId)
+        {
+            var user = new User();
+            await user.GetOrGenerateUserIdAsync(_browserStorage);
+            if (!user.IsAdmin)
+            {
+                return;
+            }
+
+            var newVotes = 0;
+            Paging<PlaylistTrack<IPlayableItem>> response;
+            do
+            {
+                var options = new PlaylistGetItemsRequest()
+                {
+                    Offset = newVotes,
+                    Limit = 100
+                };
+
+                response = await _spotifyClient.Playlists.GetItems(playlistId, options);
+                response.Items?
+                        .Select(x => x.Track)
+                        .Cast<FullTrack>()
+                        .Select(x => x.Id)
+                        .Where(x => songVotes.All(y => x != y.Key))
+                        .ToList()
+                        .ForEach(async x => await AddVoteByTrackIdAsync(x, user, true));
+
+                newVotes += response.Items?.Count() ?? 999999; // if anything is null stop
+            }
+            while ((response?.Total ?? 0) > newVotes);
         }
 
         public async Task AddVoteAsync(FullTrack track, bool isLike)
@@ -44,13 +78,10 @@ namespace WishYourSong.Data
             var user = new User();
             await user.GetOrGenerateUserIdAsync(_browserStorage);
 
-            AddVoteByTrackId(track.Id, user, isLike);
-
-            // Save to DB
-            await _dbContext.SaveAsync(new UserVote(user.Id, track.Id, isLike));
+            await AddVoteByTrackIdAsync(track.Id, user, isLike);
         }
 
-        private void AddVoteByTrackId(string trackId, User user, bool isLike)
+        private async Task AddVoteByTrackIdAsync(string trackId, User user, bool isLike)
         {
             songVotes.TryAdd(trackId, new UserVotes());
             if (user.IsAdmin)
@@ -61,6 +92,8 @@ namespace WishYourSong.Data
             {
                 songVotes[trackId].AddVote(user.Id, isLike);
             }
+            // Save to DB
+            await _dbContext.SaveAsync(new UserVote(user.Id, trackId, isLike));
         }
 
         public int GetVotes(string songId)
@@ -77,6 +110,11 @@ namespace WishYourSong.Data
         internal List<string> GetIds()
         {
             return songVotes.Keys.ToList();
+        }
+
+        internal int CountTracks()
+        {
+            return songVotes.Count;
         }
     }
 }

@@ -1,0 +1,68 @@
+﻿@page "/AddPlaylist"
+@using System.Text.RegularExpressions
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@using WishYourSong.Components
+@using Radzen.Blazor
+@inject WishYourSong.Data.Votes votes
+
+@inject NotificationService NotificationService
+@inject ProtectedLocalStorage BrowserStorage
+
+<PageTitle>Add Playlist</PageTitle>
+
+<CustomAuthView>
+    <RadzenTextBox Placeholder="Search..." type="search" @oninput="@OnSearch" Class="w-100" @bind-Value=@val />
+</CustomAuthView>
+
+@code
+{
+    public string val { get; set; } = "";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await votes.Init(BrowserStorage);
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private async void OnSearch(ChangeEventArgs args)
+    {
+        if (args != null && args.Value != null)
+        {
+            string text = (args?.Value?.ToString()) ?? "";
+            var match = Regex.Match(text, @"playlist\/([^?]*)", RegexOptions.IgnoreCase);
+
+            if (match.Success)
+            {
+                try
+                {
+                    await votes.AddPlaylistAsync(match.Groups[1].Value);
+                    var message = new NotificationMessage()
+                        {
+                            Detail = "Playlist added",
+                            Summary = "Success",
+                            Severity = NotificationSeverity.Success,
+                            Duration = 5000
+                        };
+                    NotificationService.Notify(message);
+                }
+                catch (Exception ex)
+                {
+                    var message = new NotificationMessage()
+                        {
+                            Summary = "Failed",
+                            Detail = "Playlist not added:\n" + ex.Message,
+                            Severity = NotificationSeverity.Error,
+                            Duration = 5000
+                        };
+                    NotificationService.Notify(message);
+                }
+                val = "";
+                await InvokeAsync(() => StateHasChanged());
+            }
+        }
+    }
+}

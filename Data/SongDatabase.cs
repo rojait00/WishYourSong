@@ -4,7 +4,7 @@ namespace WishYourSong.Data
 {
     public class SongDatabase
     {
-        private ISpotifyClient _spotifyClient;
+        private readonly ISpotifyClient _spotifyClient;
         public List<FullTrack> Tracks { get; set; } = new List<FullTrack>();
 
         public SongDatabase(ISpotifyClient spotifyClient)
@@ -14,12 +14,18 @@ namespace WishYourSong.Data
 
         public async Task Init(Votes votes)
         {
-            if(Tracks.Count == 0 && votes.Any())
+            if(Tracks.Count != votes.CountTracks())
             {
-                var trackIds = votes.GetIds();
-                var trackResponse = await _spotifyClient.Tracks.GetSeveral(new TracksRequest(trackIds));
-                
-                Tracks.AddRange(trackResponse.Tracks);
+                Tracks.Clear();
+                var trackIdBatches = votes.GetIds().Select((x,i) => (i: i%50,id:x)).GroupBy(x=> x.i);
+
+                foreach (var batch in trackIdBatches)
+                {
+                    var ids = batch.Select(grp => grp.id).ToList();
+                    var request = new TracksRequest(ids);
+                    var trackResponse = await _spotifyClient.Tracks.GetSeveral(request);
+                    Tracks.AddRange(trackResponse.Tracks);
+                }
             }
         }
 
@@ -37,7 +43,7 @@ namespace WishYourSong.Data
             return GetName(track1) == GetName(track2);
         }
 
-        private string GetName(FullTrack track)
+        private static string GetName(FullTrack track)
         {
             return track.Name + " - " + String.Join(",", track.Artists.Select(x => x.Name).OrderBy(x => x));
         }

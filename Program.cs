@@ -41,9 +41,9 @@ var spotifyClient = new SpotifyClient(spotifyClientConfig);
 builder.Services.AddSingleton<ISpotifyClient>(spotifyClient);
 
 // WishYourSong
+builder.Services.AddSingleton<Votes>();
 builder.Services.AddSingleton<SongDatabase>();
 builder.Services.AddScoped<User>();
-builder.Services.AddSingleton<Votes>();
 
 var app = builder.Build();
 
