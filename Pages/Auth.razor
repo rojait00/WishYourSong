@@ -16,7 +16,13 @@ Set User Id to: @Guid
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await user.SetUserIdAsync(BrowserStorage, Guid);
+        var newId = await user.SetUserIdAsync(BrowserStorage, Guid);
+
+        if(newId)
+        {
+            Guid = user.Id.ToString();
+            await InvokeAsync(() => StateHasChanged());
+        }
 
         await base.OnAfterRenderAsync(firstRender);
     }

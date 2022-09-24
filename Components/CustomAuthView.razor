@@ -1,0 +1,30 @@
+﻿@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+
+@inject WishYourSong.Data.User User
+@inject ProtectedLocalStorage BrowserStorage
+
+
+@if (IsVisible && ChildContent != null)
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; } = null;
+
+    public bool IsVisible { get; set; } = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await User.GetOrGenerateUserIdAsync(BrowserStorage);
+
+        IsVisible = User.IsAdmin;
+        if(firstRender && IsVisible)
+        {
+            await InvokeAsync(() => StateHasChanged());
+        }
+        
+        await base.OnAfterRenderAsync(firstRender);
+    }
+}

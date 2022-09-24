@@ -31,28 +31,36 @@ namespace WishYourSong.Data
                     new ScanCondition("UserId", ScanOperator.IsNotNull)
                 };
 
-                var scan =  _dbContext.ScanAsync<UserVote>(conditions, new DynamoDBOperationConfig());
+                var scan = _dbContext.ScanAsync<UserVote>(conditions, new DynamoDBOperationConfig());
 
                 List<UserVote> votes = await scan.GetRemainingAsync();
 
-                votes?.ForEach(x => AddVoteByTrackId(x.TrackId, Guid.Parse(x.UserId), x.IsLike));
+                votes?.ForEach(x => AddVoteByTrackId(x.TrackId, new User(Guid.Parse(x.UserId)), x.IsLike));
             }
         }
 
         public async Task AddVoteAsync(FullTrack track, bool isLike)
         {
-            Guid userId = await new User().GetOrGenerateUserIdAsync(_browserStorage);
+            var user = new User();
+            await user.GetOrGenerateUserIdAsync(_browserStorage);
 
-            AddVoteByTrackId(track.Id, userId, isLike);
+            AddVoteByTrackId(track.Id, user, isLike);
 
             // Save to DB
-            await _dbContext.SaveAsync(new UserVote(userId, track.Id, isLike));
+            await _dbContext.SaveAsync(new UserVote(user.Id, track.Id, isLike));
         }
 
-        private void AddVoteByTrackId(string trackId, Guid userId, bool isLike)
+        private void AddVoteByTrackId(string trackId, User user, bool isLike)
         {
             songVotes.TryAdd(trackId, new UserVotes());
-            songVotes[trackId].AddVote(userId, isLike);
+            if (user.IsAdmin)
+            {
+                songVotes[trackId].AddVote(Guid.NewGuid(), isLike);
+            }
+            else
+            {
+                songVotes[trackId].AddVote(user.Id, isLike);
+            }
         }
 
         public int GetVotes(string songId)

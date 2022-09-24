@@ -4,8 +4,19 @@ namespace WishYourSong.Data
 {
     public class User
     {
+
         public Guid Id { get; set; } = Guid.NewGuid();
 
+        public bool IsAdmin { get; set; } = false;
+        
+        public User()
+        {
+        }
+        
+        public User(Guid id)
+        {
+            Id = id;
+        }
         public async Task<Guid> GetOrGenerateUserIdAsync(ProtectedLocalStorage? browserStorage)
         {
             if (browserStorage == null)
@@ -14,9 +25,10 @@ namespace WishYourSong.Data
             }
 
             var result = await browserStorage.GetAsync<string>("userId");
-            if (result.Success == true && result.Value != null)
+            if (result.Success == true && !string.IsNullOrEmpty(result.Value))
             {
                 Id = Guid.Parse(result.Value);
+            IsAdmin = Id == Guid.Empty;
             }
             else
             {
@@ -27,13 +39,22 @@ namespace WishYourSong.Data
             return Id;
         }
 
-        internal async Task SetUserIdAsync(ProtectedLocalStorage? browserStorage, string? id)
+        internal async Task<bool> SetUserIdAsync(ProtectedLocalStorage? browserStorage, string? id)
         {
-            if (browserStorage != null && Guid.TryParse(id,out Guid guid))
+            if (browserStorage != null )
             {
-                await browserStorage.SetAsync("userId", id);
+                if (!Guid.TryParse(id, out Guid guid))
+                {
+                    guid = Guid.NewGuid();
+                }
+
+                await browserStorage.SetAsync("userId", guid.ToString());
+                var newId = Id != guid;
                 Id = guid;
+                return newId;
             }
+
+            return false;
         }
     }
 }
