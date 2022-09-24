@@ -1,0 +1,23 @@
+﻿@page "/auth/{guid}"
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@using WishYourSong.Data
+
+@inject User user
+@inject ProtectedLocalStorage BrowserStorage
+
+<PageTitle>About</PageTitle>
+
+
+Set User Id to: @Guid
+
+@code{
+    [Parameter] 
+    public string? Guid { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await user.SetUserIdAsync(BrowserStorage, Guid);
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+}

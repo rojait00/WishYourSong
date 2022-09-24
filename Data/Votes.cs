@@ -21,8 +21,8 @@ namespace WishYourSong.Data
         public async Task Init(ProtectedLocalStorage browserStorage)
         {
             _browserStorage = browserStorage;
-            await GetOrSetUserId();
-            
+            await new User().GetOrGenerateUserIdAsync(_browserStorage);
+
             if (songVotes.Count == 0)
             {
                 var conditions = new List<ScanCondition>()
@@ -41,7 +41,7 @@ namespace WishYourSong.Data
 
         public async Task AddVoteAsync(FullTrack track, bool isLike)
         {
-            Guid userId = await GetOrSetUserId();
+            Guid userId = await new User().GetOrGenerateUserIdAsync(_browserStorage);
 
             AddVoteByTrackId(track.Id, userId, isLike);
 
@@ -53,28 +53,6 @@ namespace WishYourSong.Data
         {
             songVotes.TryAdd(trackId, new UserVotes());
             songVotes[trackId].AddVote(userId, isLike);
-        }
-
-        private async Task<Guid> GetOrSetUserId()
-        {
-            if (_browserStorage == null)
-            {
-                throw new InvalidOperationException("_browserStorage has not been initialized");
-            }
-
-            Guid userId;
-            var result = await _browserStorage.GetAsync<string>("userId");
-            if (result.Success == true && result.Value != null)
-            {
-                userId = Guid.Parse(result.Value);
-            }
-            else
-            {
-                userId = Guid.NewGuid();
-                await _browserStorage.SetAsync("userId", userId.ToString());
-            }
-
-            return userId;
         }
 
         public int GetVotes(string songId)

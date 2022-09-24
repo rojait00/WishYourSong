@@ -16,6 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 
+// Radzen
 builder.Services.AddScoped<DialogService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<TooltipService>();
@@ -41,8 +42,8 @@ builder.Services.AddSingleton<ISpotifyClient>(spotifyClient);
 
 // WishYourSong
 builder.Services.AddSingleton<SongDatabase>();
-builder.Services.AddSingleton<Votes>();
 builder.Services.AddScoped<User>();
+builder.Services.AddSingleton<Votes>();
 
 var app = builder.Build();
 
@@ -59,9 +60,6 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
-
-app.UseAuthentication();
-app.UseAuthorization();
 
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
