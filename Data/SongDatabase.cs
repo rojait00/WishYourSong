@@ -50,6 +50,9 @@ namespace WishYourSong.Data
 
         public async Task<List<FullTrack>> SearchTrackAsync(string term)
         {
+            if(string.IsNullOrEmpty(term))
+            { return new List<FullTrack>(); }
+
             var request = new SearchRequest(SearchRequest.Types.Track, term)
             {
                 Limit = 50,
@@ -60,9 +63,11 @@ namespace WishYourSong.Data
             return items?.Tracks?.Items ?? new List<FullTrack>();
         }
 
-        public List<FullTrack> GetContainedTracks(List<FullTrack> result)
+        public List<Track> GetContainedTracks(IEnumerable<Track> result)
         {
-            return result.Where(x => Tracks.Any(dbT => dbT.Id == x.Id)).ToList(); // ToDo: use Votes
+            return result.Where(x => Tracks.Any(dbT => dbT.Id == x.FullTrack.Id))
+                         .OrderByDescending(x=> x.Likes)
+                         .ToList();
         }
     }
 }

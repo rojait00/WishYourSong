@@ -1,0 +1,45 @@
+﻿@page "/EditDB"
+@using SpotifyAPI.Web
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@using WishYourSong.Data
+
+@inject WishYourSong.Data.Votes votes
+
+@inject ProtectedLocalStorage BrowserStorage
+@inject NavigationManager NavigationManager
+
+
+<h3>Database Edit</h3>
+
+<RadzenButton ButtonStyle="ButtonStyle.Secondary" Icon="cloud_download" Class="m-1" Click=@(() => Export()) />
+<RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="cloud_upload" Class="m-1" Click=@(() => Import()) />
+
+
+<RadzenTextArea @bind-Value=@Json Class="w-100" />
+
+@code {
+
+    public string Json { get; set; } = "{}";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await votes.Init(BrowserStorage);
+            Export();
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private void Export()
+    {
+        Json = Newtonsoft.Json.JsonConvert.SerializeObject(votes.SongVotes, Newtonsoft.Json.Formatting.Indented);
+    }
+
+    private void Import()
+    {
+        var votes = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Track>>(Json);
+        // ToDo: write to Db
+    }
+}

@@ -1,38 +1,24 @@
 ﻿@using SpotifyAPI.Web
 @using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@using WishYourSong.Data
 
-@inject WishYourSong.Data.SongDatabase db
-@inject WishYourSong.Data.Votes votes
+@inject SongDatabase db
+@inject Votes votes
 
 <RadzenTextBox Placeholder="Search..." type="search" @oninput="@OnSearch" Class="w-100" />
 
 @if (ContainedSongs.Any())
 {
     <h3>In Playlist</h3>
-    <RadzenDataGrid @ref="containedTrackGrid" AllowPaging="true" PageSize="15" AllowSorting="true" Data="@ContainedSongs" TItem="FullTrack">
+    <RadzenDataGrid @ref="containedTrackGrid" AllowPaging="true" PageSize="15" AllowSorting="true" Data="@ContainedSongs" TItem="Track">
         <Columns>
-            <RadzenDataGridColumn TItem="FullTrack" Title="Title" Filterable="false" Sortable="true" Width="40%">
+            <RadzenDataGridColumn TItem="Track" Property="Title" Title="Title" Sortable="true" Width="40%" />
+            <RadzenDataGridColumn TItem="Track" Property="Artist" Title="Artist" Sortable="true" Width="40%" />
+            <RadzenDataGridColumn TItem="Track" Property="Likes" Title="Likes" Sortable="true" TextAlign="TextAlign.Center" Width="10%" />
+            <RadzenDataGridColumn TItem="Track" Property="Vote" Title="Vote" Width="100px" Sortable=false TextAlign=TextAlign.Center>
                 <Template Context="song">
-                    @song.Name
-                </Template>
-            </RadzenDataGridColumn>
-
-            <RadzenDataGridColumn TItem="FullTrack" Title="Artist" Filterable="false" Sortable="true" Width="40%">
-                <Template Context="song">
-                    @string.Join(", ", song.Artists.Select(x=> x.Name).OrderBy(x=> x))
-                </Template>
-            </RadzenDataGridColumn>
-
-            <RadzenDataGridColumn TItem="FullTrack" Title="Likes" Filterable="false" Sortable="true" TextAlign="TextAlign.Center" Width="10%">
-                <Template Context="song">
-                    @votes.GetVotes(song.Id)
-                </Template>
-            </RadzenDataGridColumn>
-
-            <RadzenDataGridColumn TItem="FullTrack" Title="Vote" Width="100px" Filterable=false Sortable=false TextAlign=TextAlign.Center>
-                <Template Context="song">
-                    <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="thumb_up" Class="m-1" Click=@(() => votes.AddVoteAsync(song, true)) />
-                    <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="thumb_down" Class="m-1" Click=@(() => votes.AddVoteAsync(song, false)) />
+                    <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="thumb_up" Class="m-1" Click=@(() => song.AddVoteAsync(true)) />
+                    <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="thumb_down" Class="m-1" Click=@(() => song.AddVoteAsync(false)) />
                 </Template>
             </RadzenDataGridColumn>
         </Columns>
@@ -42,21 +28,11 @@
 @if (NewSongs.Any())
 {
     <h3>Search Results</h3>
-    <RadzenDataGrid @ref="newTrackGrid" AllowFiltering="false" AllowPaging="true" PageSize="15" AllowSorting="true" Data="@NewSongs" TItem="FullTrack">
+    <RadzenDataGrid @ref="newTrackGrid" AllowFiltering="false" AllowPaging="true" PageSize="15" AllowSorting="true" Data="@NewSongs" TItem="Track">
         <Columns>
-            <RadzenDataGridColumn TItem="FullTrack" Title="Title" Filterable="false" Sortable="true" Width="45%">
-                <Template Context="song">
-                    @song.Name
-                </Template>
-            </RadzenDataGridColumn>
-
-            <RadzenDataGridColumn TItem="FullTrack" Title="Artist" Filterable="false" Sortable="true" Width="45%">
-                <Template Context="song">
-                    @string.Join(", ", song.Artists.Select(x=> x.Name).OrderBy(x=> x))
-                </Template>
-            </RadzenDataGridColumn>
-
-            <RadzenDataGridColumn TItem="FullTrack" Property="OrderID" Title="Vote" Width="50px" Filterable=false Sortable=false>
+            <RadzenDataGridColumn TItem="Track" Property="Title" Title="Title" Sortable="true" Width="45%" />
+            <RadzenDataGridColumn TItem="Track" Property="Artist" Title="Artist" Sortable="true" Width="45%" />
+            <RadzenDataGridColumn TItem="Track" Property="Vote" Title="Vote" Width="100px" Sortable=false TextAlign=TextAlign.Center>
                 <Template Context="song">
                     <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="thumb_up" Class="m-1" Click=@(() => AddSong(song)) />
                 </Template>
@@ -86,11 +62,11 @@
     [Parameter]
     public EventCallback<string> ValueChanged { get; set; }
 
-    public List<FullTrack> ContainedSongs { get; set; } = new List<FullTrack>();
-    public List<FullTrack> NewSongs { get; set; } = new List<FullTrack>();
+    public List<Track> ContainedSongs { get; set; } = new List<Track>();
+    public List<Track> NewSongs { get; set; } = new List<Track>();
 
-    RadzenDataGrid<FullTrack>? newTrackGrid;
-    RadzenDataGrid<FullTrack>? containedTrackGrid;
+    RadzenDataGrid<Track>? newTrackGrid;
+    RadzenDataGrid<Track>? containedTrackGrid;
 
     string term = "";
 
@@ -98,21 +74,21 @@
     {
         Value = args?.Value?.ToString() ?? "";
 
-        List<FullTrack> result;
+        IEnumerable<Track> result;
 
         try
         {
-            result = await db.SearchTrackAsync(term);
+            result = (await db.SearchTrackAsync(term)).Select(x => new Track(x,votes));
         }
         catch
         {
-            result = new List<FullTrack>();
+            result = new List<Track>();
         }
 
         ContainedSongs = db.GetContainedTracks(result);
 
         NewSongs = result.Take(15)
-                         .Where(x => !ContainedSongs.Any(c => db.EqualSong(x, c)))
+                         .Where(x => !ContainedSongs.Any(c => db.EqualSong(x.FullTrack, c.FullTrack)))
                          .ToList();
 
         if (containedTrackGrid != null)
@@ -125,11 +101,13 @@
         }
     }
 
-    public async void AddSong(FullTrack song)
+    public async void AddSong(Track track)
     {
+        track.Likes = 1;
+        var song = track.FullTrack;
         db.AddTrack(song);
-        NewSongs.Remove(song);
-        ContainedSongs.Add(song);
+        NewSongs.Remove(track);
+        ContainedSongs.Add(track);
 
         await votes.AddVoteAsync(song, true);
 

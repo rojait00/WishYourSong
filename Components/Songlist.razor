@@ -1,38 +1,29 @@
 ﻿@using SpotifyAPI.Web
 @using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@using WishYourSong.Data
 
 @inject WishYourSong.Data.SongDatabase db
 @inject WishYourSong.Data.Votes votes
 
 @inject ProtectedLocalStorage BrowserStorage
+@inject NavigationManager NavigationManager
 
 
 <h3>Playlist</h3>
 
-<RadzenDataGrid @ref="trackGrid" AllowFiltering="true" AllowPaging="true" PageSize="15" AllowSorting="true" Data="@db.Tracks" TItem="FullTrack">
+<RadzenDataGrid @ref="trackGrid" AllowPaging="true" PageSize="15" AllowSorting="true" Data="@tracks" TItem="Track">
     <Columns>
-        <RadzenDataGridColumn TItem="FullTrack" Title="Title" Filterable="true" Sortable="true" Width="40%">
+        <RadzenDataGridColumn TItem="Track" Property="Title" Title="Title" Sortable="true" Width="40%" />
+        <RadzenDataGridColumn TItem="Track" Property="Artist" Title="Artist" Sortable="true" Width="40%" />
+        <RadzenDataGridColumn TItem="Track" Property="Likes" Title="Likes" Sortable="true" TextAlign="TextAlign.Center" Width="5%" />
+        <RadzenDataGridColumn TItem="Track" Property="Vote" Title="Vote" Width="100px" Sortable=false TextAlign=TextAlign.Center>
             <Template Context="song">
-                @song.Name
-            </Template>
-        </RadzenDataGridColumn>
-
-        <RadzenDataGridColumn TItem="FullTrack" Title="Artist" Filterable="true" Sortable="true" Width="40%">
-            <Template Context="song">
-                @string.Join(", ", song.Artists.Select(x=> x.Name).OrderBy(x=>x))
-            </Template>
-        </RadzenDataGridColumn>
-
-        <RadzenDataGridColumn TItem="FullTrack" Title="Likes" Filterable="true" Sortable="true" TextAlign="TextAlign.Center" Width="10%">
-            <Template Context="song">
-                @votes.GetVotes(song.Id)
-            </Template>
-        </RadzenDataGridColumn>
-
-        <RadzenDataGridColumn TItem="FullTrack" Title="Vote" Width="100px" Filterable=false Sortable=false TextAlign=TextAlign.Center>
-            <Template Context="song">
-                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="thumb_up" Class="m-1" Click=@(() => votes.AddVoteAsync(song, true)) />
-                <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="thumb_down" Class="m-1" Click=@(() => votes.AddVoteAsync(song, false)) />
+                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="thumb_up" Class="m-1" Click=@(() => song.AddVoteAsync(true)) />
+                <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="thumb_down" Class="m-1" Click=@(() => song.AddVoteAsync(false)) />
+                <CustomAuthView>
+                    <RadzenButton ButtonStyle="ButtonStyle.Secondary" Icon="insert_link" Class="m-1" Click=@(() => Redirect(song)) />
+                    <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Class="m-1" Click=@(() => song.RemoveAsync()) />
+                </CustomAuthView>
             </Template>
         </RadzenDataGridColumn>
     </Columns>
@@ -41,8 +32,16 @@
 
 @code {
 
-    RadzenDataGrid<FullTrack>? trackGrid;
+    RadzenDataGrid<Track>? trackGrid;
 
+    IEnumerable<Track>? tracks;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        tracks = db.Tracks.Select(x => new Track(x, votes)).OrderByDescending(x => x.Likes);
+    }
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -56,5 +55,10 @@
         }
 
         await base.OnAfterRenderAsync(firstRender);
+    }
+
+    public void Redirect(Track track)
+    {
+        NavigationManager.NavigateTo(track.FullTrack.Uri);
     }
 }

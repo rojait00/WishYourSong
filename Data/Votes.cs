@@ -8,7 +8,7 @@ namespace WishYourSong.Data
 {
     public class Votes
     {
-        readonly Dictionary<string, UserVotes> songVotes = new();
+        internal Dictionary<string, UserVotes> SongVotes { get; } = new();
         private ProtectedLocalStorage? _browserStorage;
         private readonly IDynamoDBContext _dbContext;
         private readonly ISpotifyClient _spotifyClient;
@@ -24,13 +24,15 @@ namespace WishYourSong.Data
             _browserStorage = browserStorage;
             await new User().GetOrGenerateUserIdAsync(_browserStorage);
 
-            if (songVotes.Count == 0)
+            if (SongVotes.Count == 0)
             {
                 var conditions = new List<ScanCondition>()
                 {
                     new ScanCondition("TrackId", ScanOperator.IsNotNull),
                     new ScanCondition("UserId", ScanOperator.IsNotNull)
                 };
+
+                // ToDo: use json test file if no db available
 
                 var scan = _dbContext.ScanAsync<UserVote>(conditions, new DynamoDBOperationConfig());
 
@@ -64,7 +66,7 @@ namespace WishYourSong.Data
                         .Select(x => x.Track)
                         .Cast<FullTrack>()
                         .Select(x => x.Id)
-                        .Where(x => songVotes.All(y => x != y.Key))
+                        .Where(x => SongVotes.All(y => x != y.Key))
                         .ToList()
                         .ForEach(async x => await AddVoteByTrackIdAsync(x, user, true));
 
@@ -83,38 +85,39 @@ namespace WishYourSong.Data
 
         private async Task AddVoteByTrackIdAsync(string trackId, User user, bool isLike)
         {
-            songVotes.TryAdd(trackId, new UserVotes());
+            SongVotes.TryAdd(trackId, new UserVotes());
+
+            var userId = user.Id;
             if (user.IsAdmin)
             {
-                songVotes[trackId].AddVote(Guid.NewGuid(), isLike);
+                userId = Guid.NewGuid();
             }
-            else
-            {
-                songVotes[trackId].AddVote(user.Id, isLike);
-            }
+
+            SongVotes[trackId].AddVote(userId, isLike);
+            
             // Save to DB
-            await _dbContext.SaveAsync(new UserVote(user.Id, trackId, isLike));
+            await _dbContext.SaveAsync(new UserVote(userId, trackId, isLike));
         }
 
         public int GetVotes(string songId)
         {
-            songVotes.TryGetValue(songId, out UserVotes? votes);
+            SongVotes.TryGetValue(songId, out UserVotes? votes);
             return votes?.GetResult() ?? 0;
         }
 
         internal bool Any()
         {
-            return songVotes.Any();
+            return SongVotes.Any();
         }
 
         internal List<string> GetIds()
         {
-            return songVotes.Keys.ToList();
+            return SongVotes.Keys.ToList();
         }
 
         internal int CountTracks()
         {
-            return songVotes.Count;
+            return SongVotes.Count;
         }
     }
 }
